@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, Link as LinkIcon, FileText, Loader2 } from 'lucide-react';
-import { storageAPI, jobsAPI } from '@/utils/api';
+import { mockStorageService, mockJobsService } from '@/utils/mockData';
+import { getUser } from '@/utils/auth';
 import { useToastContext } from './ToastContext';
 
 interface ApplyModalProps {
@@ -73,14 +74,10 @@ const ApplyModal: React.FC<ApplyModalProps> = ({
     setErrors({});
 
     try {
-      // Try to get presigned URL
-      const presignResponse = await storageAPI.getPresignedUrl(file.name);
-      const { url, publicUrl } = presignResponse.data;
-
-      // Upload to presigned URL
-      await storageAPI.uploadToPresignedUrl(url, file);
-
-      setResumeUrl(publicUrl);
+      // Use mock storage service
+      const uploadedUrl = await mockStorageService.uploadFile(file);
+      
+      setResumeUrl(uploadedUrl);
       setUploadedFileName(file.name);
       addToast({
         type: 'success',
@@ -106,13 +103,20 @@ const ApplyModal: React.FC<ApplyModalProps> = ({
 
     if (!validateForm()) return;
 
+    const user = getUser();
+    if (!user) {
+      setErrors({ general: 'Please login to apply' });
+      return;
+    }
+
     setIsSubmitting(true);
     setErrors({});
 
     try {
-      await jobsAPI.apply(jobId, {
+      await mockJobsService.apply(jobId, {
         resumeUrl,
         coverLetter: coverLetter.trim() || undefined,
+        userId: user.sub,
       });
 
       addToast({
@@ -130,7 +134,7 @@ const ApplyModal: React.FC<ApplyModalProps> = ({
       addToast({
         type: 'error',
         title: 'Application failed',
-        message: 'Please try again later.',
+        message: errorMessage,
       });
     } finally {
       setIsSubmitting(false);

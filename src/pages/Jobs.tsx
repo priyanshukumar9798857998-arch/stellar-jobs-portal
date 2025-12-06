@@ -6,7 +6,7 @@ import JobCard, { Job } from '@/components/JobCard';
 import SearchBar, { FilterState } from '@/components/SearchBar';
 import ApplyModal from '@/components/ApplyModal';
 import { useToastContext } from '@/components/ToastContext';
-import { jobsAPI } from '@/utils/api';
+import { mockJobsService } from '@/utils/mockData';
 import socketService from '@/utils/socket';
 
 const Jobs: React.FC = () => {
@@ -36,14 +36,14 @@ const Jobs: React.FC = () => {
     setError(null);
 
     try {
-      const response = await jobsAPI.getAll({
+      const response = await mockJobsService.getAll({
         page: pageNum,
         size: 20,
         search: searchQuery || undefined,
       });
 
-      const newJobs = response.data.content || response.data || [];
-      const totalPages = response.data.totalPages || 1;
+      const newJobs = response.content || [];
+      const totalPages = response.totalPages || 1;
 
       if (pageNum === 1) {
         setJobs(newJobs);

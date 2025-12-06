@@ -10,8 +10,10 @@ export interface Job {
   requirements: string[];
   salary?: string;
   type: string;
-  createdAt: string;
+  createdAt?: string;
+  postedAt?: string;
   applicantCount?: number;
+  tags?: string[];
 }
 
 interface JobCardProps {
@@ -97,7 +99,7 @@ const JobCard: React.FC<JobCardProps> = ({
             )}
             <span className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
-              {formatDate(job.createdAt)}
+              {formatDate(job.createdAt || job.postedAt || new Date().toISOString())}
             </span>
             {job.applicantCount !== undefined && (
               <span className="flex items-center gap-1">

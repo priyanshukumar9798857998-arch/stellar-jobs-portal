@@ -13,7 +13,7 @@ import {
 import Header from '@/components/Header';
 import { Job } from '@/components/JobCard';
 import { useToastContext } from '@/components/ToastContext';
-import { jobsAPI } from '@/utils/api';
+import { mockJobsService } from '@/utils/mockData';
 import { isAdmin } from '@/utils/auth';
 
 interface Applicant {
@@ -62,8 +62,8 @@ const Admin: React.FC = () => {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const response = await jobsAPI.getAll({ page: 1, size: 100 });
-        setJobs(response.data.content || response.data || []);
+        const response = await mockJobsService.getAll({ page: 1, size: 100 });
+        setJobs(response.content || []);
       } catch (err) {
         console.error('Failed to fetch jobs:', err);
         addToast({
@@ -103,7 +103,7 @@ const Admin: React.FC = () => {
         .map((r) => r.trim())
         .filter((r) => r);
 
-      const response = await jobsAPI.create({
+      const newJob = await mockJobsService.create({
         title: formData.title.trim(),
         company: formData.company.trim(),
         location: formData.location.trim(),
@@ -111,9 +111,10 @@ const Admin: React.FC = () => {
         requirements,
         salary: formData.salary.trim() || undefined,
         type: formData.type,
+        tags: [],
       });
 
-      setJobs((prev) => [response.data, ...prev]);
+      setJobs((prev) => [newJob, ...prev]);
       setShowCreateForm(false);
       setFormData({
         title: '',
@@ -146,10 +147,17 @@ const Admin: React.FC = () => {
     setLoadingApplicants(true);
 
     try {
-      const response = await jobsAPI.getApplicants(job.id);
+      const applicants = await mockJobsService.getApplicants(job.id);
       setSelectedJobApplicants({
         job,
-        applicants: response.data || [],
+        applicants: applicants.map(app => ({
+          id: app.id,
+          email: app.userId,
+          name: app.userId,
+          resumeUrl: app.resumeUrl,
+          coverLetter: app.coverLetter,
+          appliedAt: app.appliedAt,
+        })),
       });
     } catch (err) {
       console.error('Failed to fetch applicants:', err);
@@ -166,7 +174,7 @@ const Admin: React.FC = () => {
     if (!confirm('Are you sure you want to delete this job posting?')) return;
 
     try {
-      await jobsAPI.delete(jobId);
+      // For mock, just remove from local state
       setJobs((prev) => prev.filter((j) => j.id !== jobId));
       addToast({
         type: 'success',

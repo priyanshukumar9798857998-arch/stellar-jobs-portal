@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, Loader2, Briefcase } from 'lucide-react';
-import { authAPI } from '@/utils/api';
 import { setToken, setRefreshToken } from '@/utils/auth';
 import { useToastContext } from '@/components/ToastContext';
+import { mockAuthService } from '@/utils/mockAuth';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
@@ -56,14 +57,14 @@ const Login: React.FC = () => {
     setErrors({});
 
     try {
-      let response;
+      let result;
       if (isLogin) {
-        response = await authAPI.login(email, password);
+        result = await mockAuthService.login(email, password);
       } else {
-        response = await authAPI.register({ email, password, name });
+        result = await mockAuthService.register({ email, password, name });
       }
 
-      const { token, refreshToken } = response.data;
+      const { token, refreshToken } = result;
       setToken(token);
       if (refreshToken) {
         setRefreshToken(refreshToken);
@@ -78,9 +79,7 @@ const Login: React.FC = () => {
       navigate('/jobs');
     } catch (error: unknown) {
       console.error('Auth error:', error);
-      const errorMessage =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        'Authentication failed. Please try again.';
+      const errorMessage = error instanceof Error ? error.message : 'Authentication failed. Please try again.';
       setErrors({ general: errorMessage });
     } finally {
       setIsLoading(false);
@@ -92,7 +91,12 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen split-layout">
+    <div className="min-h-screen split-layout relative">
+      {/* Theme Toggle */}
+      <div className="absolute top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
+
       {/* Background Effects */}
       <div className="space-bg">
         <div className="orb orb-1" />

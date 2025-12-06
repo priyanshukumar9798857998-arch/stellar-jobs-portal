@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, Briefcase, User, LogOut, Shield, Home } from 'lucide-react';
 import { getUser, isAdmin, logout } from '@/utils/auth';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const Header: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -65,6 +66,7 @@ const Header: React.FC = () => {
                 ))}
                 <div className="w-px h-6 bg-[hsl(var(--border))] mx-2" />
                 <div className="flex items-center gap-3">
+                  <ThemeToggle />
                   <div className="text-sm">
                     <p className="font-medium text-[hsl(var(--foreground))]">
                       {user.email}
@@ -85,6 +87,7 @@ const Header: React.FC = () => {
               </>
             ) : (
               <>
+                <ThemeToggle />
                 <Link
                   to="/login"
                   className="btn-ghost focus-ring"
@@ -123,13 +126,16 @@ const Header: React.FC = () => {
           <nav className="px-4 py-4 space-y-2">
             {user ? (
               <>
-                <div className="px-4 py-3 mb-4 rounded-lg bg-[hsl(var(--muted))]">
-                  <p className="font-medium text-[hsl(var(--foreground))]">
-                    {user.email}
-                  </p>
-                  <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                    {user.role}
-                  </p>
+                <div className="flex items-center justify-between px-4 py-3 mb-4 rounded-lg bg-[hsl(var(--muted))]">
+                  <div>
+                    <p className="font-medium text-[hsl(var(--foreground))]">
+                      {user.email}
+                    </p>
+                    <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                      {user.role}
+                    </p>
+                  </div>
+                  <ThemeToggle />
                 </div>
                 {navLinks.map((link) => (
                   <Link
@@ -156,6 +162,10 @@ const Header: React.FC = () => {
               </>
             ) : (
               <>
+                <div className="flex items-center justify-between px-4 py-2 mb-2">
+                  <span className="text-sm text-[hsl(var(--muted-foreground))]">Theme</span>
+                  <ThemeToggle />
+                </div>
                 <Link
                   to="/"
                   onClick={() => setIsMobileMenuOpen(false)}
