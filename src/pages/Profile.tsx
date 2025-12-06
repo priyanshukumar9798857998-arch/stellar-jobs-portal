@@ -1,73 +1,92 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Bell, Loader2 } from 'lucide-react';
+import { User, Mail, Bell, Loader2, Save, BellRing, Newspaper } from 'lucide-react';
 import Header from '@/components/Header';
 import { useToastContext } from '@/components/ToastContext';
-import { userAPI } from '@/utils/api';
 import { getUser } from '@/utils/auth';
+import { getUserSettings, updateUserSettings } from '@/utils/userSettings';
 
 const Profile: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [emailSubscription, setEmailSubscription] = useState(false);
-  const [profile, setProfile] = useState<{
-    email: string;
-    name: string;
-    role: string;
-  } | null>(null);
+  const [name, setName] = useState('');
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [weeklyDigest, setWeeklyDigest] = useState(false);
+  const [jobAlerts, setJobAlerts] = useState(true);
+  const [hasChanges, setHasChanges] = useState(false);
 
   const { addToast } = useToastContext();
   const user = getUser();
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await userAPI.getProfile();
-        setProfile(response.data);
-        setEmailSubscription(response.data.emailSubscription || false);
-      } catch (err) {
-        console.error('Failed to fetch profile:', err);
-        // Use local user data as fallback
-        if (user) {
-          setProfile({
-            email: user.email,
-            name: user.sub,
-            role: user.role,
-          });
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProfile();
+    // Load settings from localStorage
+    const settings = getUserSettings();
+    setName(settings.name || user?.email?.split('@')[0] || '');
+    setEmailNotifications(settings.emailNotifications);
+    setWeeklyDigest(settings.weeklyDigest);
+    setJobAlerts(settings.jobAlerts);
+    setIsLoading(false);
   }, [user]);
 
-  const handleSubscriptionToggle = async () => {
+  const handleSaveProfile = async () => {
     setIsSaving(true);
 
     try {
-      await userAPI.updateProfile({
-        emailSubscription: !emailSubscription,
+      updateUserSettings({
+        name,
+        emailNotifications,
+        weeklyDigest,
+        jobAlerts,
       });
 
-      setEmailSubscription(!emailSubscription);
       addToast({
         type: 'success',
-        title: 'Preferences updated',
-        message: !emailSubscription
-          ? 'You will now receive email notifications'
-          : 'Email notifications disabled',
+        title: 'Profile updated',
+        message: 'Your changes have been saved',
       });
+      setHasChanges(false);
     } catch (err) {
-      console.error('Failed to update preferences:', err);
+      console.error('Failed to save profile:', err);
       addToast({
         type: 'error',
-        title: 'Failed to update preferences',
+        title: 'Failed to save',
+        message: 'Please try again',
       });
     } finally {
       setIsSaving(false);
     }
   };
+
+  const handleToggle = (
+    setter: React.Dispatch<React.SetStateAction<boolean>>,
+    current: boolean
+  ) => {
+    setter(!current);
+    setHasChanges(true);
+  };
+
+  const ToggleSwitch: React.FC<{
+    checked: boolean;
+    onChange: () => void;
+    disabled?: boolean;
+    label: string;
+  }> = ({ checked, onChange, disabled, label }) => (
+    <button
+      onClick={onChange}
+      disabled={disabled || isLoading}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-ring ${
+        checked ? 'bg-[hsl(var(--primary))]' : 'bg-[hsl(var(--muted))]'
+      }`}
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-[hsl(var(--foreground))] transition-transform ${
+          checked ? 'translate-x-6' : 'translate-x-1'
+        }`}
+      />
+    </button>
+  );
 
   return (
     <div className="min-h-screen">
@@ -83,10 +102,10 @@ const Profile: React.FC = () => {
           {/* Page Header */}
           <div className="mb-8 animate-fade-in">
             <h1 className="text-3xl font-bold text-[hsl(var(--foreground))] mb-2">
-              Profile
+              Profile Settings
             </h1>
             <p className="text-[hsl(var(--muted-foreground))]">
-              Manage your account settings and preferences
+              Manage your account and notification preferences
             </p>
           </div>
 
@@ -107,31 +126,39 @@ const Profile: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              ) : profile ? (
-                <div className="flex items-start gap-6">
+              ) : (
+                <div className="flex flex-col sm:flex-row items-start gap-6">
                   {/* Avatar */}
                   <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[hsl(var(--primary))] to-[hsl(var(--accent))] flex items-center justify-center flex-shrink-0">
                     <User className="w-10 h-10 text-[hsl(var(--primary-foreground))]" />
                   </div>
 
                   {/* Info */}
-                  <div className="flex-1 space-y-4">
+                  <div className="flex-1 space-y-4 w-full">
                     <div>
-                      <label className="text-sm text-[hsl(var(--muted-foreground))]">
-                        Name
+                      <label htmlFor="name" className="form-label">
+                        Display Name
                       </label>
-                      <p className="text-lg font-medium text-[hsl(var(--foreground))]">
-                        {profile.name || 'Not set'}
-                      </p>
+                      <input
+                        type="text"
+                        id="name"
+                        value={name}
+                        onChange={(e) => {
+                          setName(e.target.value);
+                          setHasChanges(true);
+                        }}
+                        className="input-glass"
+                        placeholder="Enter your name"
+                      />
                     </div>
                     <div>
                       <label className="text-sm text-[hsl(var(--muted-foreground))]">
                         Email
                       </label>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 mt-1">
                         <Mail className="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                         <p className="text-[hsl(var(--foreground))]">
-                          {profile.email}
+                          {user?.email || 'Not set'}
                         </p>
                       </div>
                     </div>
@@ -139,66 +166,114 @@ const Profile: React.FC = () => {
                       <label className="text-sm text-[hsl(var(--muted-foreground))]">
                         Role
                       </label>
-                      <span className="inline-block badge badge-primary mt-1">
-                        {profile.role}
-                      </span>
+                      <div className="mt-1">
+                        <span className="badge badge-primary">
+                          {user?.role || 'USER'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              ) : (
-                <p className="text-[hsl(var(--muted-foreground))]">
-                  Failed to load profile information
-                </p>
               )}
             </div>
 
             {/* Email Preferences Card */}
             <div className="card-glass animate-slide-up" style={{ animationDelay: '100ms' }}>
               <h2 className="text-lg font-semibold mb-6 text-[hsl(var(--foreground))]">
-                Email Preferences
+                Notification Preferences
               </h2>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-[hsl(var(--primary)/0.2)] flex items-center justify-center flex-shrink-0">
-                    <Bell className="w-5 h-5 text-[hsl(var(--primary))]" />
+              <div className="space-y-6">
+                {/* Email Notifications */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-[hsl(var(--primary)/0.2)] flex items-center justify-center flex-shrink-0">
+                      <Bell className="w-5 h-5 text-[hsl(var(--primary))]" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-[hsl(var(--foreground))]">
+                        Email Notifications
+                      </h3>
+                      <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                        Receive emails about your account activity
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-medium text-[hsl(var(--foreground))]">
-                      Job Notifications
-                    </h3>
-                    <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                      Receive email notifications when new jobs matching your
-                      interests are posted
-                    </p>
-                  </div>
+                  <ToggleSwitch
+                    checked={emailNotifications}
+                    onChange={() => handleToggle(setEmailNotifications, emailNotifications)}
+                    label="Toggle email notifications"
+                  />
                 </div>
 
-                {/* Toggle Switch */}
+                {/* Job Alerts */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-[hsl(var(--secondary)/0.2)] flex items-center justify-center flex-shrink-0">
+                      <BellRing className="w-5 h-5 text-[hsl(var(--secondary))]" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-[hsl(var(--foreground))]">
+                        Job Alerts
+                      </h3>
+                      <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                        Get notified when new jobs match your interests
+                      </p>
+                    </div>
+                  </div>
+                  <ToggleSwitch
+                    checked={jobAlerts}
+                    onChange={() => handleToggle(setJobAlerts, jobAlerts)}
+                    label="Toggle job alerts"
+                  />
+                </div>
+
+                {/* Weekly Digest */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-[hsl(var(--accent)/0.2)] flex items-center justify-center flex-shrink-0">
+                      <Newspaper className="w-5 h-5 text-[hsl(var(--accent))]" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-[hsl(var(--foreground))]">
+                        Weekly Digest
+                      </h3>
+                      <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                        Receive a weekly summary of new job postings
+                      </p>
+                    </div>
+                  </div>
+                  <ToggleSwitch
+                    checked={weeklyDigest}
+                    onChange={() => handleToggle(setWeeklyDigest, weeklyDigest)}
+                    label="Toggle weekly digest"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Save Button */}
+            {hasChanges && (
+              <div className="animate-slide-up">
                 <button
-                  onClick={handleSubscriptionToggle}
-                  disabled={isSaving || isLoading}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-ring ${
-                    emailSubscription
-                      ? 'bg-[hsl(var(--primary))]'
-                      : 'bg-[hsl(var(--muted))]'
-                  }`}
-                  role="switch"
-                  aria-checked={emailSubscription}
-                  aria-label="Toggle email notifications"
+                  onClick={handleSaveProfile}
+                  disabled={isSaving}
+                  className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2"
                 >
                   {isSaving ? (
-                    <Loader2 className="absolute left-1/2 -translate-x-1/2 w-4 h-4 animate-spin text-[hsl(var(--foreground))]" />
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </>
                   ) : (
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-[hsl(var(--foreground))] transition-transform ${
-                        emailSubscription ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
+                    <>
+                      <Save className="w-4 h-4" />
+                      Save Changes
+                    </>
                   )}
                 </button>
               </div>
-            </div>
+            )}
 
             {/* Danger Zone */}
             <div
@@ -212,7 +287,18 @@ const Profile: React.FC = () => {
                 Once you delete your account, there is no going back. Please be
                 certain.
               </p>
-              <button className="btn-danger text-sm">Delete Account</button>
+              <button 
+                className="btn-danger text-sm"
+                onClick={() => {
+                  addToast({
+                    type: 'info',
+                    title: 'Demo mode',
+                    message: 'Account deletion is disabled in demo',
+                  });
+                }}
+              >
+                Delete Account
+              </button>
             </div>
           </div>
         </div>
