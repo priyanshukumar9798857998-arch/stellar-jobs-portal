@@ -7,6 +7,7 @@ import SearchBar, { FilterState } from '@/components/SearchBar';
 import ApplyModal from '@/components/ApplyModal';
 import { useToastContext } from '@/components/ToastContext';
 import { mockJobsService } from '@/utils/mockData';
+import { getBookmarks, toggleBookmark } from '@/utils/bookmarks';
 import socketService from '@/utils/socket';
 
 const Jobs: React.FC = () => {
@@ -22,6 +23,7 @@ const Jobs: React.FC = () => {
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [newJobIds, setNewJobIds] = useState<Set<string>>(new Set());
+  const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
 
   const navigate = useNavigate();
   const { addToast } = useToastContext();
@@ -62,9 +64,10 @@ const Jobs: React.FC = () => {
     }
   }, [searchQuery]);
 
-  // Initial fetch
+  // Initial fetch and load bookmarks
   useEffect(() => {
     fetchJobs(1);
+    setBookmarkedIds(new Set(getBookmarks()));
   }, [fetchJobs]);
 
   // WebSocket connection
@@ -140,6 +143,15 @@ const Jobs: React.FC = () => {
 
   const handleViewJob = (job: Job) => {
     navigate(`/jobs/${job.id}`);
+  };
+
+  const handleToggleBookmark = (jobId: string) => {
+    const result = toggleBookmark(jobId);
+    setBookmarkedIds(new Set(result.bookmarks));
+    addToast({
+      type: 'info',
+      title: result.isBookmarked ? 'Job saved' : 'Bookmark removed',
+    });
   };
 
   const loadMore = () => {
@@ -263,13 +275,15 @@ const Jobs: React.FC = () => {
           ) : (
             <>
               <div className="grid gap-4">
-                {filteredJobs.map((job, index) => (
+                {filteredJobs.map((job) => (
                   <div key={job.id} className="stagger-item">
                     <JobCard
                       job={job}
                       onApply={() => handleApply(job)}
                       onView={() => handleViewJob(job)}
                       isNew={newJobIds.has(job.id)}
+                      isBookmarked={bookmarkedIds.has(job.id)}
+                      onToggleBookmark={() => handleToggleBookmark(job.id)}
                     />
                   </div>
                 ))}

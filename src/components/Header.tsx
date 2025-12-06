@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, Briefcase, User, LogOut, Shield, Home } from 'lucide-react';
+import { Menu, X, Briefcase, User, LogOut, Shield, Home, Bookmark } from 'lucide-react';
 import { getUser, isAdmin, logout } from '@/utils/auth';
 import ThemeToggle from '@/components/ThemeToggle';
 
@@ -20,6 +20,7 @@ const Header: React.FC = () => {
 
   const navLinks = [
     { path: '/jobs', label: 'Jobs', icon: <Briefcase className="w-4 h-4" /> },
+    { path: '/bookmarks', label: 'Saved', icon: <Bookmark className="w-4 h-4" /> },
     { path: '/profile', label: 'Profile', icon: <User className="w-4 h-4" /> },
   ];
 

@@ -13,6 +13,7 @@ const Jobs = lazy(() => import('./pages/Jobs'));
 const JobDetail = lazy(() => import('./pages/JobDetail'));
 const Admin = lazy(() => import('./pages/Admin'));
 const Profile = lazy(() => import('./pages/Profile'));
+const Bookmarks = lazy(() => import('./pages/Bookmarks'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Protected Route Component
@@ -82,6 +83,14 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/bookmarks"
+              element={
+                <ProtectedRoute>
+                  <Bookmarks />
                 </ProtectedRoute>
               }
             />

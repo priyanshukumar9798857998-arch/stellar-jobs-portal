@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Building2, DollarSign, Clock, Briefcase } from 'lucide-react';
+import { MapPin, Building2, DollarSign, Clock, Briefcase, Bookmark } from 'lucide-react';
 
 export interface Job {
   id: string;
@@ -22,6 +22,8 @@ interface JobCardProps {
   onView?: () => void;
   showApplyButton?: boolean;
   isNew?: boolean;
+  isBookmarked?: boolean;
+  onToggleBookmark?: () => void;
 }
 
 const JobCard: React.FC<JobCardProps> = ({
@@ -30,6 +32,8 @@ const JobCard: React.FC<JobCardProps> = ({
   onView,
   showApplyButton = true,
   isNew = false,
+  isBookmarked = false,
+  onToggleBookmark,
 }) => {
   const typeColors: Record<string, string> = {
     'FULL_TIME': 'badge-primary',
@@ -59,8 +63,28 @@ const JobCard: React.FC<JobCardProps> = ({
       role="article"
       aria-label={`Job: ${job.title} at ${job.company}`}
     >
+      {/* Bookmark Button */}
+      {onToggleBookmark && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleBookmark();
+          }}
+          className={`absolute top-4 right-4 p-2 rounded-lg transition-colors focus-ring ${
+            isBookmarked
+              ? 'bg-[hsl(var(--primary)/0.2)] text-[hsl(var(--primary))]'
+              : 'hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'
+          }`}
+          aria-label={isBookmarked ? 'Remove from bookmarks' : 'Add to bookmarks'}
+        >
+          <Bookmark
+            className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`}
+          />
+        </button>
+      )}
+
       {isNew && (
-        <div className="absolute -top-2 -right-2 px-2 py-1 text-xs font-bold rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
+        <div className="absolute -top-2 -left-2 px-2 py-1 text-xs font-bold rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
           NEW
         </div>
       )}
