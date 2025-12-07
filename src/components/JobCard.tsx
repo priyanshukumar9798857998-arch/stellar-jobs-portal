@@ -1,5 +1,5 @@
-import React from 'react';
-import { MapPin, Building2, DollarSign, Clock, Briefcase, Bookmark } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { MapPin, Building2, DollarSign, Clock, Briefcase, Bookmark, Timer, ExternalLink } from 'lucide-react';
 
 export interface Job {
   id: string;
@@ -14,6 +14,9 @@ export interface Job {
   postedAt?: string;
   applicantCount?: number;
   tags?: string[];
+  expiresAt?: string;
+  applyUrl?: string;
+  applicationSteps?: string[];
 }
 
 interface JobCardProps {
@@ -35,6 +38,9 @@ const JobCard: React.FC<JobCardProps> = ({
   isBookmarked = false,
   onToggleBookmark,
 }) => {
+  const [timeRemaining, setTimeRemaining] = useState<string>('');
+  const [isExpired, setIsExpired] = useState(false);
+
   const typeColors: Record<string, string> = {
     'FULL_TIME': 'badge-primary',
     'PART_TIME': 'badge-secondary',
@@ -42,6 +48,39 @@ const JobCard: React.FC<JobCardProps> = ({
     'INTERNSHIP': 'badge-success',
     'REMOTE': 'badge-primary',
   };
+
+  useEffect(() => {
+    if (!job.expiresAt) return;
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const expiry = new Date(job.expiresAt!).getTime();
+      const diff = expiry - now;
+
+      if (diff <= 0) {
+        setIsExpired(true);
+        setTimeRemaining('Expired');
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+      if (days > 0) {
+        setTimeRemaining(`${days}d ${hours}h left`);
+      } else if (hours > 0) {
+        setTimeRemaining(`${hours}h ${minutes}m left`);
+      } else {
+        setTimeRemaining(`${minutes}m left`);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [job.expiresAt]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -55,6 +94,16 @@ const JobCard: React.FC<JobCardProps> = ({
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
     return date.toLocaleDateString();
   };
+
+  const handleApplyClick = () => {
+    if (job.applyUrl) {
+      window.open(job.applyUrl, '_blank', 'noopener,noreferrer');
+    } else if (onApply) {
+      onApply();
+    }
+  };
+
+  if (isExpired) return null; // Don't render expired jobs
 
   return (
     <article
@@ -133,6 +182,18 @@ const JobCard: React.FC<JobCardProps> = ({
             )}
           </div>
 
+          {/* Expiration Timer */}
+          {job.expiresAt && timeRemaining && (
+            <div className={`flex items-center gap-2 text-sm mb-3 ${
+              timeRemaining.includes('h') && !timeRemaining.includes('d')
+                ? 'text-[hsl(var(--destructive))]'
+                : 'text-[hsl(var(--warning))]'
+            }`}>
+              <Timer className="w-4 h-4" />
+              <span className="font-medium">{timeRemaining}</span>
+            </div>
+          )}
+
           {/* Description */}
           <p className="text-sm text-[hsl(var(--muted-foreground))] line-clamp-2 mb-4">
             {job.description}
@@ -167,12 +228,13 @@ const JobCard: React.FC<JobCardProps> = ({
                 View Details
               </button>
             )}
-            {showApplyButton && onApply && (
+            {showApplyButton && (
               <button
-                onClick={onApply}
-                className="btn-primary text-sm focus-ring"
+                onClick={handleApplyClick}
+                className="btn-primary text-sm focus-ring flex items-center gap-2"
               >
                 Apply Now
+                {job.applyUrl && <ExternalLink className="w-4 h-4" />}
               </button>
             )}
           </div>

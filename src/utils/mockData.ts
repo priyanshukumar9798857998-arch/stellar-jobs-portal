@@ -4,6 +4,9 @@ import { Job } from '@/components/JobCard';
 const JOBS_KEY = 'job_portal_jobs';
 const APPLICATIONS_KEY = 'job_portal_applications';
 
+// Helper to create expiration dates
+const daysFromNow = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
 const defaultJobs: Job[] = [
   {
     id: '1',
@@ -12,9 +15,18 @@ const defaultJobs: Job[] = [
     location: 'San Francisco, CA',
     type: 'Full-time',
     salary: '$120k - $160k',
-    description: 'We are looking for an experienced frontend developer to join our team. You will be responsible for building user interfaces using React and TypeScript.',
-    requirements: ['5+ years React experience', 'TypeScript proficiency', 'CSS/Tailwind expertise'],
+    description: 'We are looking for an experienced frontend developer to join our team. You will be responsible for building user interfaces using React and TypeScript. The ideal candidate has a strong understanding of modern web technologies and best practices.',
+    requirements: ['5+ years React experience', 'TypeScript proficiency', 'CSS/Tailwind expertise', 'Git version control', 'Agile methodology'],
     postedAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+    expiresAt: daysFromNow(5),
+    applyUrl: 'https://careers.techcorp.example.com/apply/senior-frontend',
+    applicationSteps: [
+      'Click "Apply Now" to visit our careers page',
+      'Create an account or log in',
+      'Upload your resume and cover letter',
+      'Complete the technical assessment',
+      'Submit your application'
+    ],
     tags: ['React', 'TypeScript', 'Remote'],
   },
   {
@@ -24,9 +36,18 @@ const defaultJobs: Job[] = [
     location: 'New York, NY',
     type: 'Full-time',
     salary: '$130k - $170k',
-    description: 'Join our backend team to build scalable APIs and microservices. Work with cutting-edge technologies and solve complex problems.',
-    requirements: ['Node.js or Python', 'Database design', 'REST/GraphQL APIs'],
+    description: 'Join our backend team to build scalable APIs and microservices. Work with cutting-edge technologies and solve complex problems. You will collaborate with cross-functional teams to deliver high-quality software.',
+    requirements: ['Node.js or Python', 'Database design', 'REST/GraphQL APIs', 'Docker/Kubernetes', 'Cloud platforms (AWS/GCP)'],
     postedAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+    expiresAt: daysFromNow(10),
+    applyUrl: 'https://jobs.dataflow.example.com/backend-engineer',
+    applicationSteps: [
+      'Submit your application through our portal',
+      'Complete a coding challenge (sent within 24 hours)',
+      'Technical phone screen with our engineering team',
+      'Virtual onsite interviews (4 rounds)',
+      'Offer decision within 1 week'
+    ],
     tags: ['Node.js', 'PostgreSQL', 'AWS'],
   },
   {
@@ -36,9 +57,18 @@ const defaultJobs: Job[] = [
     location: 'Remote',
     type: 'Contract',
     salary: '$80k - $110k',
-    description: 'Design beautiful and intuitive user experiences for our clients. Collaborate with developers and stakeholders to create amazing products.',
-    requirements: ['Figma proficiency', 'User research experience', 'Portfolio required'],
+    description: 'Design beautiful and intuitive user experiences for our clients. Collaborate with developers and stakeholders to create amazing products. You will conduct user research and create wireframes, prototypes, and high-fidelity designs.',
+    requirements: ['Figma proficiency', 'User research experience', 'Portfolio required', 'Wireframing & prototyping', 'Design systems knowledge'],
     postedAt: new Date(Date.now() - 86400000 * 1).toISOString(),
+    expiresAt: daysFromNow(3),
+    applyUrl: 'https://creativestudio.example.com/careers/ux-designer',
+    applicationSteps: [
+      'Review the job requirements carefully',
+      'Prepare your portfolio showcasing UX projects',
+      'Apply via our website with your portfolio link',
+      'Complete a design challenge (3-5 days)',
+      'Interview with design lead and team'
+    ],
     tags: ['Figma', 'UI/UX', 'Remote'],
   },
   {
@@ -48,9 +78,18 @@ const defaultJobs: Job[] = [
     location: 'Austin, TX',
     type: 'Full-time',
     salary: '$140k - $180k',
-    description: 'Build and maintain our cloud infrastructure. Implement CI/CD pipelines and ensure high availability of our services.',
-    requirements: ['Kubernetes', 'AWS/GCP', 'Terraform'],
+    description: 'Build and maintain our cloud infrastructure. Implement CI/CD pipelines and ensure high availability of our services. You will work on automation, monitoring, and security of our production systems.',
+    requirements: ['Kubernetes', 'AWS/GCP', 'Terraform', 'CI/CD pipelines', 'Linux administration'],
     postedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
+    expiresAt: daysFromNow(7),
+    applyUrl: 'https://cloudscale.example.com/jobs/devops',
+    applicationSteps: [
+      'Apply through our careers portal',
+      'Initial HR screening call',
+      'Technical assessment (infrastructure design)',
+      'Technical interviews with DevOps team',
+      'Final interview with Engineering Director'
+    ],
     tags: ['Kubernetes', 'AWS', 'CI/CD'],
   },
   {
@@ -60,9 +99,18 @@ const defaultJobs: Job[] = [
     location: 'Boston, MA',
     type: 'Full-time',
     salary: '$110k - $150k',
-    description: 'Lead product development from ideation to launch. Work closely with engineering, design, and marketing teams.',
-    requirements: ['3+ years PM experience', 'Agile methodology', 'Technical background preferred'],
+    description: 'Lead product development from ideation to launch. Work closely with engineering, design, and marketing teams. You will define product strategy, prioritize features, and ensure successful product launches.',
+    requirements: ['3+ years PM experience', 'Agile methodology', 'Technical background preferred', 'Data-driven decision making', 'Excellent communication'],
     postedAt: new Date(Date.now() - 86400000 * 7).toISOString(),
+    expiresAt: daysFromNow(14),
+    applyUrl: 'https://startupxyz.example.com/apply/pm',
+    applicationSteps: [
+      'Submit your resume and LinkedIn profile',
+      'Complete a product case study',
+      'Phone screen with hiring manager',
+      'Panel interview with stakeholders',
+      'Reference checks and offer'
+    ],
     tags: ['Product', 'Agile', 'Leadership'],
   },
 ];
@@ -70,7 +118,18 @@ const defaultJobs: Job[] = [
 const getStoredJobs = (): Job[] => {
   const stored = localStorage.getItem(JOBS_KEY);
   if (stored) {
-    return JSON.parse(stored);
+    const jobs = JSON.parse(stored) as Job[];
+    // Filter out expired jobs
+    const now = new Date().getTime();
+    const validJobs = jobs.filter(job => {
+      if (!job.expiresAt) return true;
+      return new Date(job.expiresAt).getTime() > now;
+    });
+    // If jobs were filtered, save the updated list
+    if (validJobs.length !== jobs.length) {
+      localStorage.setItem(JOBS_KEY, JSON.stringify(validJobs));
+    }
+    return validJobs;
   }
   localStorage.setItem(JOBS_KEY, JSON.stringify(defaultJobs));
   return defaultJobs;
@@ -97,6 +156,24 @@ const getStoredApplications = (): Application[] => {
 
 const saveApplications = (applications: Application[]) => {
   localStorage.setItem(APPLICATIONS_KEY, JSON.stringify(applications));
+};
+
+// Clean up expired jobs periodically
+export const cleanupExpiredJobs = () => {
+  const stored = localStorage.getItem(JOBS_KEY);
+  if (!stored) return;
+  
+  const jobs = JSON.parse(stored) as Job[];
+  const now = new Date().getTime();
+  const validJobs = jobs.filter(job => {
+    if (!job.expiresAt) return true;
+    return new Date(job.expiresAt).getTime() > now;
+  });
+  
+  if (validJobs.length !== jobs.length) {
+    localStorage.setItem(JOBS_KEY, JSON.stringify(validJobs));
+    console.log(`Cleaned up ${jobs.length - validJobs.length} expired jobs`);
+  }
 };
 
 export const mockJobsService = {
@@ -144,6 +221,7 @@ export const mockJobsService = {
       ...data,
       id: `job-${Date.now()}`,
       postedAt: new Date().toISOString(),
+      expiresAt: data.expiresAt || daysFromNow(30), // Default 30 days expiration
     };
     jobs.unshift(newJob);
     saveJobs(jobs);
@@ -186,7 +264,6 @@ export const mockJobsService = {
 export const mockStorageService = {
   getPresignedUrl: async (filename: string): Promise<{ url: string; key: string }> => {
     await new Promise((resolve) => setTimeout(resolve, 200));
-    // Return a mock presigned URL - in reality this would be an S3/cloud storage URL
     const key = `uploads/${Date.now()}-${filename}`;
     return {
       url: `https://mock-storage.example.com/${key}`,
@@ -196,12 +273,9 @@ export const mockStorageService = {
 
   uploadFile: async (file: File): Promise<string> => {
     await new Promise((resolve) => setTimeout(resolve, 500));
-    // Simulate file upload - in a real app this would upload to cloud storage
-    // For demo, we'll create a data URL (only works for small files)
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
-        // Store in localStorage for demo (limited size)
         const dataUrl = reader.result as string;
         resolve(dataUrl);
       };
