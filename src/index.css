@@ -31,6 +31,8 @@
     
     --success: 145 70% 50%;
     --success-foreground: 220 20% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 220 20% 10%;
     
     --border: 230 20% 25%;
     --input: 230 25% 20%;
@@ -100,6 +102,8 @@
     
     --success: 145 70% 40%;
     --success-foreground: 220 20% 98%;
+    --warning: 45 93% 47%;
+    --warning-foreground: 220 20% 10%;
     
     --border: 220 15% 85%;
     --input: 220 15% 95%;

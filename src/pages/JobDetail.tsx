@@ -8,12 +8,13 @@ import {
   Clock,
   Briefcase,
   CheckCircle,
-  Loader2,
+  Timer,
+  ExternalLink,
+  ListChecks,
 } from 'lucide-react';
 import Header from '@/components/Header';
-import ApplyModal from '@/components/ApplyModal';
 import { Job } from '@/components/JobCard';
-import { jobsAPI } from '@/utils/api';
+import { mockJobsService } from '@/utils/mockData';
 
 const JobDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +22,8 @@ const JobDetail: React.FC = () => {
   const [job, setJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState<string>('');
+  const [isExpired, setIsExpired] = useState(false);
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -31,8 +33,21 @@ const JobDetail: React.FC = () => {
       setError(null);
 
       try {
-        const response = await jobsAPI.getById(id);
-        setJob(response.data);
+        const response = await mockJobsService.getById(id);
+        if (response) {
+          // Check if expired
+          if (response.expiresAt) {
+            const expiry = new Date(response.expiresAt).getTime();
+            if (expiry <= Date.now()) {
+              setIsExpired(true);
+              setError('This job posting has expired.');
+              return;
+            }
+          }
+          setJob(response);
+        } else {
+          setError('Job not found');
+        }
       } catch (err) {
         console.error('Failed to fetch job:', err);
         setError('Failed to load job details.');
@@ -43,6 +58,40 @@ const JobDetail: React.FC = () => {
 
     fetchJob();
   }, [id]);
+
+  // Expiration timer
+  useEffect(() => {
+    if (!job?.expiresAt) return;
+
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const expiry = new Date(job.expiresAt!).getTime();
+      const diff = expiry - now;
+
+      if (diff <= 0) {
+        setIsExpired(true);
+        setTimeRemaining('Expired');
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+      if (days > 0) {
+        setTimeRemaining(`${days} days, ${hours} hours remaining`);
+      } else if (hours > 0) {
+        setTimeRemaining(`${hours} hours, ${minutes} minutes remaining`);
+      } else {
+        setTimeRemaining(`${minutes} minutes remaining`);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 60000);
+
+    return () => clearInterval(interval);
+  }, [job?.expiresAt]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -58,6 +107,12 @@ const JobDetail: React.FC = () => {
     'CONTRACT': 'badge-accent',
     'INTERNSHIP': 'badge-success',
     'REMOTE': 'badge-primary',
+  };
+
+  const handleApply = () => {
+    if (job?.applyUrl) {
+      window.open(job.applyUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
   if (isLoading) {
@@ -90,7 +145,7 @@ const JobDetail: React.FC = () => {
     );
   }
 
-  if (error || !job) {
+  if (error || !job || isExpired) {
     return (
       <div className="min-h-screen">
         <div className="space-bg">
@@ -103,10 +158,12 @@ const JobDetail: React.FC = () => {
             <div className="card-glass text-center py-12">
               <Briefcase className="w-12 h-12 mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
               <h2 className="text-xl font-semibold mb-2 text-[hsl(var(--foreground))]">
-                Job Not Found
+                {isExpired ? 'Job Expired' : 'Job Not Found'}
               </h2>
               <p className="text-[hsl(var(--muted-foreground))] mb-4">
-                {error || 'This job posting may have been removed.'}
+                {isExpired 
+                  ? 'This job posting has expired and is no longer accepting applications.'
+                  : error || 'This job posting may have been removed.'}
               </p>
               <button onClick={() => navigate('/jobs')} className="btn-primary">
                 Browse All Jobs
@@ -177,7 +234,7 @@ const JobDetail: React.FC = () => {
                   )}
                   <span className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
-                    Posted {formatDate(job.createdAt)}
+                    Posted {formatDate(job.createdAt || job.postedAt || '')}
                   </span>
                   {job.applicantCount !== undefined && (
                     <span className="flex items-center gap-2">
@@ -199,7 +256,7 @@ const JobDetail: React.FC = () => {
 
                 {/* Requirements */}
                 {job.requirements && job.requirements.length > 0 && (
-                  <section>
+                  <section className="mb-6">
                     <h2 className="text-lg font-semibold mb-3 text-[hsl(var(--foreground))]">
                       Requirements
                     </h2>
@@ -216,6 +273,29 @@ const JobDetail: React.FC = () => {
                     </ul>
                   </section>
                 )}
+
+                {/* Application Steps */}
+                {job.applicationSteps && job.applicationSteps.length > 0 && (
+                  <section>
+                    <h2 className="text-lg font-semibold mb-3 text-[hsl(var(--foreground))] flex items-center gap-2">
+                      <ListChecks className="w-5 h-5" />
+                      How to Apply
+                    </h2>
+                    <ol className="space-y-3">
+                      {job.applicationSteps.map((step, index) => (
+                        <li
+                          key={index}
+                          className="flex items-start gap-3 text-[hsl(var(--muted-foreground))]"
+                        >
+                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[hsl(var(--primary)/0.2)] text-[hsl(var(--primary))] flex items-center justify-center text-sm font-semibold">
+                            {index + 1}
+                          </span>
+                          <span className="pt-0.5">{step}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                )}
               </article>
             </div>
 
@@ -226,16 +306,39 @@ const JobDetail: React.FC = () => {
                 <h3 className="text-lg font-semibold mb-4 text-[hsl(var(--foreground))]">
                   Apply for this Job
                 </h3>
+                
+                {/* Expiration Timer */}
+                {job.expiresAt && timeRemaining && (
+                  <div className={`flex items-center gap-2 text-sm mb-4 p-3 rounded-lg ${
+                    timeRemaining.includes('hours') || timeRemaining.includes('minutes')
+                      ? 'bg-[hsl(var(--destructive)/0.1)] text-[hsl(var(--destructive))]'
+                      : 'bg-[hsl(var(--warning)/0.1)] text-[hsl(var(--warning))]'
+                  }`}>
+                    <Timer className="w-4 h-4" />
+                    <span className="font-medium">{timeRemaining}</span>
+                  </div>
+                )}
+
                 <p className="text-sm text-[hsl(var(--muted-foreground))] mb-6">
-                  Submit your application and resume to be considered for this
-                  position.
+                  {job.applyUrl 
+                    ? 'Click the button below to apply on the company\'s website.'
+                    : 'Submit your application to be considered for this position.'}
                 </p>
+                
                 <button
-                  onClick={() => setShowApplyModal(true)}
-                  className="btn-primary w-full"
+                  onClick={handleApply}
+                  className="btn-primary w-full flex items-center justify-center gap-2"
+                  disabled={!job.applyUrl}
                 >
                   Apply Now
+                  {job.applyUrl && <ExternalLink className="w-4 h-4" />}
                 </button>
+
+                {job.applyUrl && (
+                  <p className="text-xs text-[hsl(var(--muted-foreground))] mt-3 text-center">
+                    You will be redirected to an external website
+                  </p>
+                )}
               </div>
 
               {/* Company Info */}
@@ -254,14 +357,6 @@ const JobDetail: React.FC = () => {
           </div>
         </div>
       </main>
-
-      {/* Apply Modal */}
-      <ApplyModal
-        isOpen={showApplyModal}
-        onClose={() => setShowApplyModal(false)}
-        jobId={job.id}
-        jobTitle={job.title}
-      />
     </div>
   );
 };
