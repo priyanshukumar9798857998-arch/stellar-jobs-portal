@@ -96,9 +96,7 @@ const JobCard: React.FC<JobCardProps> = ({
   };
 
   const handleApplyClick = () => {
-    if (job.applyUrl) {
-      window.open(job.applyUrl, '_blank', 'noopener,noreferrer');
-    } else if (onApply) {
+    if (onApply) {
       onApply();
     }
   };
@@ -231,10 +229,9 @@ const JobCard: React.FC<JobCardProps> = ({
             {showApplyButton && (
               <button
                 onClick={handleApplyClick}
-                className="btn-primary text-sm focus-ring flex items-center gap-2"
+                className="btn-primary text-sm focus-ring"
               >
                 Apply Now
-                {job.applyUrl && <ExternalLink className="w-4 h-4" />}
               </button>
             )}
           </div>

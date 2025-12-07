@@ -1,155 +1,25 @@
-import React, { useState, useRef } from 'react';
-import { X, Upload, Link as LinkIcon, FileText, Loader2 } from 'lucide-react';
-import { mockStorageService, mockJobsService } from '@/utils/mockData';
-import { getUser } from '@/utils/auth';
-import { useToastContext } from './ToastContext';
+import React from 'react';
+import { X, ExternalLink, CheckCircle2, FileText, AlertCircle } from 'lucide-react';
+import { Job } from './JobCard';
 
 interface ApplyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  jobId: string;
-  jobTitle: string;
+  job: Job;
 }
 
 const ApplyModal: React.FC<ApplyModalProps> = ({
   isOpen,
   onClose,
-  jobId,
-  jobTitle,
+  job,
 }) => {
-  const [resumeUrl, setResumeUrl] = useState('');
-  const [coverLetter, setCoverLetter] = useState('');
-  const [uploadMode, setUploadMode] = useState<'file' | 'url'>('file');
-  const [isUploading, setIsUploading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [uploadedFileName, setUploadedFileName] = useState('');
-  const [errors, setErrors] = useState<{ resume?: string; general?: string }>({});
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { addToast } = useToastContext();
-
-  const validateForm = (): boolean => {
-    const newErrors: { resume?: string } = {};
-
-    if (!resumeUrl.trim()) {
-      newErrors.resume = 'Please provide your resume';
-    } else if (uploadMode === 'url' && !isValidUrl(resumeUrl)) {
-      newErrors.resume = 'Please enter a valid URL';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const isValidUrl = (url: string): boolean => {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    const allowedTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    ];
-    if (!allowedTypes.includes(file.type)) {
-      setErrors({ resume: 'Please upload a PDF or Word document' });
-      return;
-    }
-
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      setErrors({ resume: 'File size must be less than 5MB' });
-      return;
-    }
-
-    setIsUploading(true);
-    setErrors({});
-
-    try {
-      // Use mock storage service
-      const uploadedUrl = await mockStorageService.uploadFile(file);
-      
-      setResumeUrl(uploadedUrl);
-      setUploadedFileName(file.name);
-      addToast({
-        type: 'success',
-        title: 'Resume uploaded',
-        message: file.name,
-      });
-    } catch (error) {
-      console.error('Upload error:', error);
-      // Fallback: switch to URL mode
-      setUploadMode('url');
-      addToast({
-        type: 'info',
-        title: 'Direct upload unavailable',
-        message: 'Please enter your resume URL instead',
-      });
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) return;
-
-    const user = getUser();
-    if (!user) {
-      setErrors({ general: 'Please login to apply' });
-      return;
-    }
-
-    setIsSubmitting(true);
-    setErrors({});
-
-    try {
-      await mockJobsService.apply(jobId, {
-        resumeUrl,
-        coverLetter: coverLetter.trim() || undefined,
-        userId: user.sub,
-      });
-
-      addToast({
-        type: 'success',
-        title: 'Application submitted!',
-        message: `Your application for ${jobTitle} has been sent.`,
-      });
-
-      onClose();
-      resetForm();
-    } catch (error: unknown) {
-      console.error('Application error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to submit application';
-      setErrors({ general: errorMessage });
-      addToast({
-        type: 'error',
-        title: 'Application failed',
-        message: errorMessage,
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const resetForm = () => {
-    setResumeUrl('');
-    setCoverLetter('');
-    setUploadedFileName('');
-    setErrors({});
-    setUploadMode('file');
-  };
-
   if (!isOpen) return null;
+
+  const handleApplyClick = () => {
+    if (job.applyUrl) {
+      window.open(job.applyUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   return (
     <div
@@ -159,13 +29,13 @@ const ApplyModal: React.FC<ApplyModalProps> = ({
       aria-modal="true"
       aria-labelledby="apply-modal-title"
     >
-      <div className="modal-content">
-        <div className="flex items-center justify-between mb-6">
+      <div className="modal-content max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6 sticky top-0 bg-[hsl(var(--card))] pb-4 border-b border-[hsl(var(--border))]">
           <h2
             id="apply-modal-title"
             className="text-xl font-bold text-[hsl(var(--foreground))]"
           >
-            Apply for {jobTitle}
+            {job.title}
           </h2>
           <button
             onClick={onClose}
@@ -176,170 +46,93 @@ const ApplyModal: React.FC<ApplyModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Upload Mode Toggle */}
-          <div className="flex rounded-lg overflow-hidden border border-[hsl(var(--border))]">
-            <button
-              type="button"
-              onClick={() => setUploadMode('file')}
-              className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-                uploadMode === 'file'
-                  ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
-                  : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted)/0.8)]'
-              }`}
-            >
-              <Upload className="w-4 h-4 inline mr-2" />
-              Upload File
-            </button>
-            <button
-              type="button"
-              onClick={() => setUploadMode('url')}
-              className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-                uploadMode === 'url'
-                  ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]'
-                  : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted)/0.8)]'
-              }`}
-            >
-              <LinkIcon className="w-4 h-4 inline mr-2" />
-              Enter URL
-            </button>
-          </div>
-
-          {/* Resume Input */}
-          <div>
-            <label htmlFor="resume" className="form-label">
-              Resume *
-            </label>
-            {uploadMode === 'file' ? (
-              <div
-                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-                  errors.resume
-                    ? 'border-[hsl(var(--destructive))]'
-                    : 'border-[hsl(var(--border))] hover:border-[hsl(var(--primary))]'
-                }`}
-                onClick={() => fileInputRef.current?.click()}
-                onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
-                role="button"
-                tabIndex={0}
-                aria-label="Click to upload resume"
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  id="resume"
-                  accept=".pdf,.doc,.docx"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  disabled={isUploading}
-                />
-                {isUploading ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="w-8 h-8 animate-spin text-[hsl(var(--primary))]" />
-                    <span className="text-sm text-[hsl(var(--muted-foreground))]">
-                      Uploading...
-                    </span>
-                  </div>
-                ) : uploadedFileName ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <FileText className="w-8 h-8 text-[hsl(var(--success))]" />
-                    <span className="text-sm text-[hsl(var(--foreground))] font-medium">
-                      {uploadedFileName}
-                    </span>
-                    <span className="text-xs text-[hsl(var(--muted-foreground))]">
-                      Click to replace
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2">
-                    <Upload className="w-8 h-8 text-[hsl(var(--muted-foreground))]" />
-                    <span className="text-sm text-[hsl(var(--muted-foreground))]">
-                      Click to upload PDF or Word document
-                    </span>
-                    <span className="text-xs text-[hsl(var(--muted-foreground))]">
-                      Max size: 5MB
-                    </span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <input
-                type="url"
-                id="resume"
-                value={resumeUrl}
-                onChange={(e) => setResumeUrl(e.target.value)}
-                placeholder="https://drive.google.com/your-resume.pdf"
-                className={`input-glass ${errors.resume ? 'input-error' : ''}`}
-                aria-invalid={!!errors.resume}
-                aria-describedby={errors.resume ? 'resume-error' : undefined}
-              />
-            )}
-            {errors.resume && (
-              <p id="resume-error" className="form-error" role="alert">
-                {errors.resume}
-              </p>
-            )}
-          </div>
-
-          {/* Cover Letter */}
-          <div>
-            <label htmlFor="coverLetter" className="form-label">
-              Cover Letter (Optional)
-            </label>
-            <textarea
-              id="coverLetter"
-              value={coverLetter}
-              onChange={(e) => setCoverLetter(e.target.value)}
-              placeholder="Tell us why you're a great fit for this role..."
-              rows={4}
-              className="input-glass resize-none"
-              maxLength={2000}
-            />
-            <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1 text-right">
-              {coverLetter.length}/2000
-            </p>
-          </div>
-
-          {/* Error Message */}
-          {errors.general && (
-            <div
-              className="p-4 rounded-lg bg-[hsl(var(--destructive)/0.1)] border border-[hsl(var(--destructive)/0.3)]"
-              role="alert"
-            >
-              <p className="text-sm text-[hsl(var(--destructive))]">
-                {errors.general}
-              </p>
-            </div>
+        {/* Job Info Header */}
+        <div className="mb-6 p-4 rounded-lg bg-[hsl(var(--muted)/0.5)]">
+          <p className="text-[hsl(var(--muted-foreground))] mb-1">{job.company}</p>
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">{job.location}</p>
+          {job.salary && (
+            <p className="text-sm text-[hsl(var(--primary))] font-medium mt-2">{job.salary}</p>
           )}
+        </div>
 
-          {/* Actions */}
-          <div className="flex gap-3 justify-end pt-4">
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                resetForm();
-              }}
-              className="btn-secondary focus-ring"
-              disabled={isSubmitting}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn-primary focus-ring flex items-center gap-2"
-              disabled={isSubmitting || isUploading}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Submitting...
-                </>
-              ) : (
-                'Submit Application'
-              )}
-            </button>
+        {/* Requirements Section */}
+        {job.requirements && job.requirements.length > 0 && (
+          <div className="mb-6">
+            <h3 className="flex items-center gap-2 text-lg font-semibold text-[hsl(var(--foreground))] mb-4">
+              <FileText className="w-5 h-5 text-[hsl(var(--primary))]" />
+              Requirements & Qualifications
+            </h3>
+            <ul className="space-y-2">
+              {job.requirements.map((req, index) => (
+                <li key={index} className="flex items-start gap-3 text-[hsl(var(--muted-foreground))]">
+                  <CheckCircle2 className="w-5 h-5 text-[hsl(var(--success))] flex-shrink-0 mt-0.5" />
+                  <span>{req}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-        </form>
+        )}
+
+        {/* Application Steps Section */}
+        {job.applicationSteps && job.applicationSteps.length > 0 && (
+          <div className="mb-6">
+            <h3 className="flex items-center gap-2 text-lg font-semibold text-[hsl(var(--foreground))] mb-4">
+              <AlertCircle className="w-5 h-5 text-[hsl(var(--warning))]" />
+              How to Apply
+            </h3>
+            <ol className="space-y-3">
+              {job.applicationSteps.map((step, index) => (
+                <li key={index} className="flex items-start gap-3 text-[hsl(var(--muted-foreground))]">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-sm font-medium flex items-center justify-center">
+                    {index + 1}
+                  </span>
+                  <span className="pt-0.5">{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        {/* Description */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-[hsl(var(--foreground))] mb-3">
+            Job Description
+          </h3>
+          <p className="text-[hsl(var(--muted-foreground))] leading-relaxed">
+            {job.description}
+          </p>
+        </div>
+
+        {/* Important Notice */}
+        <div className="mb-6 p-4 rounded-lg bg-[hsl(var(--warning)/0.1)] border border-[hsl(var(--warning)/0.3)]">
+          <p className="text-sm text-[hsl(var(--warning))]">
+            <strong>Note:</strong> Clicking the button below will redirect you to the official application page. Please read all requirements carefully before applying.
+          </p>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3 justify-end pt-4 border-t border-[hsl(var(--border))]">
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn-secondary focus-ring"
+          >
+            Close
+          </button>
+          {job.applyUrl ? (
+            <button
+              onClick={handleApplyClick}
+              className="btn-primary focus-ring flex items-center gap-2"
+            >
+              Apply on Official Website
+              <ExternalLink className="w-4 h-4" />
+            </button>
+          ) : (
+            <p className="text-sm text-[hsl(var(--muted-foreground))] italic py-2">
+              Application link not available
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

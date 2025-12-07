@@ -321,8 +321,7 @@ const Jobs: React.FC = () => {
             setShowApplyModal(false);
             setSelectedJob(null);
           }}
-          jobId={selectedJob.id}
-          jobTitle={selectedJob.title}
+          job={selectedJob}
         />
       )}
     </div>
