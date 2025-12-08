@@ -228,6 +228,26 @@ export const mockJobsService = {
     return newJob;
   },
 
+  update: async (id: string, data: Partial<Job>): Promise<Job | null> => {
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const jobs = getStoredJobs();
+    const index = jobs.findIndex((job) => job.id === id);
+    if (index === -1) return null;
+    
+    jobs[index] = { ...jobs[index], ...data };
+    saveJobs(jobs);
+    return jobs[index];
+  },
+
+  delete: async (id: string): Promise<boolean> => {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const jobs = getStoredJobs();
+    const filtered = jobs.filter((job) => job.id !== id);
+    if (filtered.length === jobs.length) return false;
+    saveJobs(filtered);
+    return true;
+  },
+
   apply: async (jobId: string, data: { resumeUrl: string; coverLetter?: string; userId: string }): Promise<Application> => {
     await new Promise((resolve) => setTimeout(resolve, 300));
     const applications = getStoredApplications();
