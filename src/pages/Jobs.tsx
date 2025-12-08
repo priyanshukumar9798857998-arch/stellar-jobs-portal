@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Briefcase, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { Loader2, Briefcase, RefreshCw } from 'lucide-react';
 import Header from '@/components/Header';
 import JobCard, { Job } from '@/components/JobCard';
 import SearchBar, { FilterState } from '@/components/SearchBar';
@@ -190,38 +190,15 @@ const Jobs: React.FC = () => {
                   {filteredJobs.length} jobs available
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                {/* Socket Connection Status */}
-                <div
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-                    isSocketConnected
-                      ? 'bg-[hsl(var(--success)/0.1)] text-[hsl(var(--success))]'
-                      : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'
-                  }`}
-                  aria-label={isSocketConnected ? 'Live updates active' : 'Live updates disconnected'}
-                >
-                  {isSocketConnected ? (
-                    <>
-                      <Wifi className="w-4 h-4" />
-                      <span className="hidden sm:inline">Live</span>
-                    </>
-                  ) : (
-                    <>
-                      <WifiOff className="w-4 h-4" />
-                      <span className="hidden sm:inline">Offline</span>
-                    </>
-                  )}
-                </div>
-                <button
-                  onClick={() => fetchJobs(1, true)}
-                  disabled={isRefreshing}
-                  className="btn-secondary flex items-center gap-2"
-                  aria-label="Refresh jobs"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">Refresh</span>
-                </button>
-              </div>
+              <button
+                onClick={() => fetchJobs(1, true)}
+                disabled={isRefreshing}
+                className="btn-secondary flex items-center gap-2"
+                aria-label="Refresh jobs"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
+              </button>
             </div>
 
             {/* Search Bar */}

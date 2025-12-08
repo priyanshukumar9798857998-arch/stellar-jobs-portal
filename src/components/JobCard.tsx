@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Building2, DollarSign, Clock, Briefcase, Bookmark, Timer, ExternalLink } from 'lucide-react';
-
+import { MapPin, Building2, DollarSign, Clock, Briefcase, Bookmark, Timer, Share2 } from 'lucide-react';
 export interface Job {
   id: string;
   title: string;
@@ -72,12 +71,13 @@ const JobCard: React.FC<JobCardProps> = ({
       } else if (hours > 0) {
         setTimeRemaining(`${hours}h ${minutes}m left`);
       } else {
-        setTimeRemaining(`${minutes}m left`);
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        setTimeRemaining(`${minutes}m ${seconds}s left`);
       }
     };
 
     updateTimer();
-    const interval = setInterval(updateTimer, 60000); // Update every minute
+    const interval = setInterval(updateTimer, 1000); // Update every second
 
     return () => clearInterval(interval);
   }, [job.expiresAt]);
@@ -110,25 +110,53 @@ const JobCard: React.FC<JobCardProps> = ({
       role="article"
       aria-label={`Job: ${job.title} at ${job.company}`}
     >
-      {/* Bookmark Button */}
-      {onToggleBookmark && (
+      {/* Action Buttons - Top Right */}
+      <div className="absolute top-4 right-4 flex items-center gap-2">
+        {/* Share Button */}
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onToggleBookmark();
+            const jobUrl = `${window.location.origin}/jobs/${job.id}`;
+            const shareText = `Check out this job: ${job.title} at ${job.company}`;
+            
+            if (navigator.share) {
+              navigator.share({
+                title: job.title,
+                text: shareText,
+                url: jobUrl,
+              }).catch(() => {});
+            } else {
+              // Fallback to WhatsApp share
+              const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + jobUrl)}`;
+              window.open(whatsappUrl, '_blank');
+            }
           }}
-          className={`absolute top-4 right-4 p-2 rounded-lg transition-colors focus-ring ${
-            isBookmarked
-              ? 'bg-[hsl(var(--primary)/0.2)] text-[hsl(var(--primary))]'
-              : 'hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'
-          }`}
-          aria-label={isBookmarked ? 'Remove from bookmarks' : 'Add to bookmarks'}
+          className="p-2 rounded-lg hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] transition-colors focus-ring"
+          aria-label="Share job"
         >
-          <Bookmark
-            className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`}
-          />
+          <Share2 className="w-5 h-5" />
         </button>
-      )}
+        
+        {/* Bookmark Button */}
+        {onToggleBookmark && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleBookmark();
+            }}
+            className={`p-2 rounded-lg transition-colors focus-ring ${
+              isBookmarked
+                ? 'bg-[hsl(var(--primary)/0.2)] text-[hsl(var(--primary))]'
+                : 'hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'
+            }`}
+            aria-label={isBookmarked ? 'Remove from bookmarks' : 'Add to bookmarks'}
+          >
+            <Bookmark
+              className={`w-5 h-5 ${isBookmarked ? 'fill-current' : ''}`}
+            />
+          </button>
+        )}
+      </div>
 
       {isNew && (
         <div className="absolute -top-2 -left-2 px-2 py-1 text-xs font-bold rounded-full bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]">
